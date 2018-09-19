@@ -6,11 +6,39 @@
 
  //Dependencies
 const http = require('http');
+const https = require('https');
 const url = require('url');
 const StringDecoder = require('string_decoder').StringDecoder;
+const config = require('./config');
+const fs = require('fs');
 
-//The server should respoind to all requests with a string
-const server = http.createServer((req, res)=>{
+//Instantiating the http server
+const httpServer = http.createServer((req, res)=>{
+  unifiedServer(req, res);
+});
+
+//start HTTP server
+httpServer.listen(config.httpPort,()=>{
+  console.log('The server is listening on port: '+config.httpPort);
+});
+
+//Instantiate https server
+const httpsServerOptions = {
+  'key' : fs.readFileSync('./https/key.pem'),
+  'cert' : fs.readFileSync('./https/cert.pem')
+};
+
+const httpsServer = https.createServer(httpsServerOptions,(req, res)=>{
+  unifiedServer(req, res);
+});
+
+//start HTTPS server
+httpsServer.listen(config.httpsPort,()=>{
+  console.log('The server is listening on port: '+config.httpsPort);
+});
+
+//all the server logic for both the http and https createServer
+var unifiedServer = function(req,res){
   //get the url and parse it
   const parsedURL = url.parse(req.url,true);
 
@@ -30,14 +58,14 @@ const server = http.createServer((req, res)=>{
 
   //get the payload if there is any
   var decoder = new StringDecoder('utf-8');
-  var buffer = '';
+  var streamBuffer = '';
 
   req.on('data',(data)=>{
-    buffer += decoder.write(data);
+    streamBuffer += decoder.write(data);
   });
 
   req.on('end',()=>{
-    buffer += decoder.end();
+    streamBuffer += decoder.end();
 
     //choose the handler this request should go to. if one is not found, use the not found handler
     var chosenHandler = typeof(router[trimmedPath]) !== 'undefined' ? router[trimmedPath] : handlers.notFound;
@@ -48,11 +76,10 @@ const server = http.createServer((req, res)=>{
       'queryStringObject' : queryStringObject,
       'method' : method,
       'headers' : headersObject,
-      'payload' : buffer
+      'payload' : streamBuffer
     };
 
-    //route the request to the handler specified in the router
-    chosenHandler(data, (statusCode, payload)=>{
+    function chosenHandlerCallback(statusCode, payload){
       //use the status code calledback by the handler or default
       statusCode = typeof(statusCode) == 'number' ? statusCode : 200;
 
@@ -61,45 +88,38 @@ const server = http.createServer((req, res)=>{
 
       //convert the payload to a string
       var payloadString = JSON.stringify(payload);
-      var queryString = JSON.stringify(queryStringObject);
-
-      var totalItems = payloadString += queryString
 
       //send the response
+      res.setHeader('Content-Type','application/json');
       res.writeHead(statusCode);
-      res.end(totalItems);
+      res.end(payloadString);
 
       console.log('Returning this response: ',statusCode,payloadString);
+    }
 
-    });
-
-
-
-
+    //route the request to the handler specified in the router
+    chosenHandler(data, chosenHandlerCallback);
   });
-
-});
-
-//start the erver, and have it listen on port 4000
-server.listen(4000,()=>{
-  console.log('The server is listening on port 4000');
-});
+}
 
 //define handlers
 var handlers = {};
 
 handlers.sample = function(data, callback){
-  //callback http status code, and a payload (object)
   callback(406, {'name':'sample handler'});
 };
 
-//not found handler
+handlers.ping = function(data, callback){
+  callback(200);
+};
 
+//not found handler
 handlers.notFound = function(data, callback){
   callback(404);
 };
 
-//define request router
+//define request router OBJECT
 var router = {
-  'sample' : handlers.sample
+  'sample' : handlers.sample,
+  'ping' : handlers.ping
 };
