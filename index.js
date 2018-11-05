@@ -11,11 +11,12 @@ const url = require('url');
 const StringDecoder = require('string_decoder').StringDecoder;
 const config = require('./config');
 const fs = require('fs');
+const handlers = require('./lib/handlers')
 
 //Instantiating the http server
-const httpServer = http.createServer((req, res)=>{
-  unifiedServer(req, res);
-});
+// const httpServer = http.createServer((req, res)=>{
+//   unifiedServer(req, res);
+// });
 
 //start HTTP server
 httpServer.listen(config.httpPort,()=>{
@@ -101,22 +102,6 @@ var unifiedServer = function(req,res){
     chosenHandler(data, chosenHandlerCallback);
   });
 }
-
-//define handlers
-var handlers = {};
-
-handlers.sample = function(data, callback){
-  callback(406, {'name':'sample handler'});
-};
-
-handlers.ping = function(data, callback){
-  callback(200);
-};
-
-//not found handler
-handlers.notFound = function(data, callback){
-  callback(404);
-};
 
 //define request router OBJECT
 var router = {
