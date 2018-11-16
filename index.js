@@ -9,14 +9,21 @@ const http = require('http');
 const https = require('https');
 const url = require('url');
 const StringDecoder = require('string_decoder').StringDecoder;
-const config = require('./config');
+const config = require('./lib/config');
 const fs = require('fs');
-const handlers = require('./lib/handlers')
+const handlers = require('./lib/handlers');
+const _data = require('./lib/data');
+const helpers = require('./lib/helpers');
+
+// //TESTING
+// _data.read('test','newFile', function(err,data){
+//   console.log('this was the error', err, 'and this was the data:', data);
+// });
 
 //Instantiating the http server
-// const httpServer = http.createServer((req, res)=>{
-//   unifiedServer(req, res);
-// });
+const httpServer = http.createServer((req, res)=>{
+  unifiedServer(req, res);
+});
 
 //start HTTP server
 httpServer.listen(config.httpPort,()=>{
@@ -39,7 +46,7 @@ httpsServer.listen(config.httpsPort,()=>{
 });
 
 //all the server logic for both the http and https createServer
-var unifiedServer = function(req,res){
+const unifiedServer = function(req,res){
   //get the url and parse it
   const parsedURL = url.parse(req.url,true);
 
@@ -77,7 +84,7 @@ var unifiedServer = function(req,res){
       'queryStringObject' : queryStringObject,
       'method' : method,
       'headers' : headersObject,
-      'payload' : streamBuffer
+      'payload' : helpers.parseJsonToObject(streamBuffer)
     };
 
     function chosenHandlerCallback(statusCode, payload){
@@ -103,8 +110,13 @@ var unifiedServer = function(req,res){
   });
 }
 
+
+//PATHS
 //define request router OBJECT
 var router = {
   'sample' : handlers.sample,
-  'ping' : handlers.ping
+  'ping' : handlers.ping,
+  'users' : handlers.users
 };
+
+
