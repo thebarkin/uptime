@@ -87,7 +87,8 @@ const unifiedServer = function(req,res){
       'payload' : helpers.parseJsonToObject(streamBuffer)
     };
 
-    function chosenHandlerCallback(statusCode, payload){
+    //route the request to the handler specified in the router
+    chosenHandler(data, (statusCode, payload)=>{
       //use the status code calledback by the handler or default
       statusCode = typeof(statusCode) == 'number' ? statusCode : 200;
 
@@ -103,10 +104,7 @@ const unifiedServer = function(req,res){
       res.end(payloadString);
 
       console.log('Returning this response: ',statusCode,payloadString);
-    }
-
-    //route the request to the handler specified in the router
-    chosenHandler(data, chosenHandlerCallback);
+    });
   });
 }
 
